@@ -1,0 +1,190 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.HashMap;
+import java.util.Map;
+
+public class OnlineVotingSystem {
+    private JFrame frame;
+    private JRadioButton bnp, jamat, ncp, ab;
+    private JButton voteButton, resultButton;
+    private JTextField voterIdField;
+    private JLabel messageLabel;
+    private JLabel bnpLogo, jamatLogo, ncpLogo, abLogo;
+
+    private Map<String, Boolean> voters;
+    private Map<String, Integer> votes;
+
+    public OnlineVotingSystem() {
+        initializeData();
+
+        frame = new JFrame("Online Voting System");
+        frame.setSize(600, 700);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLocationRelativeTo(null);
+        frame.setLayout(new BorderLayout(10, 30));
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        JLabel voterIdLabel = new JLabel("Enter NID:");
+        voterIdLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        voterIdField = new JTextField(15);
+        voterIdField.setFont(new Font("Arial", Font.PLAIN, 16));
+        topPanel.add(voterIdLabel);
+        topPanel.add(voterIdField);
+
+        JPanel centerPanel = new JPanel(new GridLayout(4, 2, 20, 20));
+        bnp = new JRadioButton("BNP");
+        jamat = new JRadioButton("Jamat e Islami");
+        ncp = new JRadioButton("National Citizen Party");
+        ab = new JRadioButton("AB Party");
+
+        ButtonGroup group = new ButtonGroup();
+        group.add(bnp);
+        group.add(jamat);
+        group.add(ncp);
+        group.add(ab);
+
+        // Adding logos with fixed size
+        bnpLogo = new JLabel(resizeIcon("bnp_logo.png", 100, 100));
+        jamatLogo = new JLabel(resizeIcon("jamat_logo.png", 100, 100));
+        ncpLogo = new JLabel(resizeIcon("ncp_logo.png", 100, 100));
+        abLogo = new JLabel(resizeIcon("ab_logo.png", 100, 100));
+
+        centerPanel.add(bnpLogo);
+        centerPanel.add(bnp);
+        centerPanel.add(jamatLogo);
+        centerPanel.add(jamat);
+        centerPanel.add(ncpLogo);
+        centerPanel.add(ncp);
+        centerPanel.add(abLogo);
+        centerPanel.add(ab);
+
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        voteButton = new JButton("Cast Vote");
+        resultButton = new JButton("Show Results");
+        messageLabel = new JLabel(" ", SwingConstants.CENTER);
+
+        voteButton.addActionListener(e -> castVote());
+        resultButton.addActionListener(e -> promptForPassword());
+
+        bottomPanel.add(voteButton);
+        bottomPanel.add(resultButton);
+        bottomPanel.add(messageLabel);
+
+        frame.add(topPanel, BorderLayout.NORTH);
+        frame.add(centerPanel, BorderLayout.CENTER);
+        frame.add(bottomPanel, BorderLayout.SOUTH);
+        frame.setVisible(true);
+    }
+
+    private ImageIcon resizeIcon(String path, int width, int height) {
+        ImageIcon icon = new ImageIcon(path);
+        Image image = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(image);
+    }
+
+    private void initializeData() {
+        voters = new HashMap<>();
+        voters.put("0000", false);
+        voters.put("0001", false);
+        voters.put("0010", false);
+        voters.put("0011", false);
+        voters.put("0100", false);
+        voters.put("0101", false);
+        voters.put("0110", false);
+        voters.put("0111", false);
+
+        votes = new HashMap<>();
+        votes.put("BNP", 0);
+        votes.put("Jamat e Islami", 0);
+        votes.put("National Citizen Party", 0);
+        votes.put("AB Party", 0);
+    }
+
+    private void castVote() {
+        String nid = voterIdField.getText().trim();
+        if (nid.isEmpty()) {
+            messageLabel.setText("Enter a valid NID!");
+            return;
+        }
+        if (!voters.containsKey(nid)) {
+            messageLabel.setText("NID not found!");
+            return;
+        }
+        if (voters.get(nid)) {
+            messageLabel.setText("You have already voted!");
+            return;
+        }
+
+        String selectedParty = null;
+        if (bnp.isSelected()) selectedParty = "BNP";
+        else if (jamat.isSelected()) selectedParty = "Jamat e Islami";
+        else if (ncp.isSelected()) selectedParty = "National Citizen Party";
+        else if (ab.isSelected()) selectedParty = "AB Party";
+
+        if (selectedParty != null) {
+            votes.put(selectedParty, votes.get(selectedParty) + 1);
+            voters.put(nid, true);
+            messageLabel.setText("Vote Cast Successfully!");
+
+            // Check if all voters have voted
+            if (allVotersVoted()) {
+                showResults();
+            }
+        } else {
+            messageLabel.setText("Please select a party to vote!");
+        }
+    }
+
+    private boolean allVotersVoted() {
+        for (boolean hasVoted : voters.values()) {
+            if (!hasVoted) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void promptForPassword() {
+        JPasswordField passwordField = new JPasswordField();
+        Object[] message = {
+                "Enter Password:", passwordField
+        };
+        int option = JOptionPane.showConfirmDialog(frame, message, "Password", JOptionPane.OK_CANCEL_OPTION);
+        if (option == JOptionPane.OK_OPTION) {
+            String password = new String(passwordField.getPassword());
+            if ("1234".equals(password)) {
+                showResults();
+            } else {
+                JOptionPane.showMessageDialog(frame, "Incorrect password!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void showResults() {
+        StringBuilder result = new StringBuilder("Voting Results:\n");
+        String winner = null;
+        int maxVotes = -1;
+        int countMax = 0;
+
+        // Find max votes
+        for (Map.Entry<String, Integer> entry : votes.entrySet()) {
+            result.append(entry.getKey()).append(": ").append(entry.getValue()).append(" votes\n");
+
+            if (entry.getValue() > maxVotes) {
+                maxVotes = entry.getValue();
+                winner = entry.getKey();
+                countMax = 1;
+            } else if (entry.getValue() == maxVotes) {
+                countMax++;
+            }
+        }
+
+        if (countMax > 1) {
+            result.append("\nElection is tied!");
+        } else {
+            result.append("\nWinner: ").append(winner);
+        }
+
+        JOptionPane.showMessageDialog(frame, result.toString(), "Election Results", JOptionPane.INFORMATION_MESSAGE);
+    }
